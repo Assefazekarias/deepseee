@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deep Sea Fishing</title>
+    <script src="/_sdk/element_sdk.js"></script>
+    <script src="/_sdk/data_sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .level-btn {
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00e5ff;
+            color: #00e5ff;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+        .level-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+            background: rgba(0, 60, 90, 0.8);
+        }
+        .level-btn:disabled {
+            border-color: #334155;
+            color: #475569;
+            background: rgba(0, 10, 20, 0.8);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .level-btn.unlocked {
+            background: linear-gradient(135deg, rgba(0, 30, 60, 0.9), rgba(0, 50, 80, 0.9));
+            color: #ffffff;
+        }
+        .level-btn.unlocked .lock-icon {
+            display: none;
+        }
+        .level-btn:disabled .lock-icon {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="h-full w-full ocean-bg overflow-hidden">
+    <main class="relative h-full w-full" id="app-wrapper">
+        <div id="bubbles" class="absolute inset-0 pointer-events-none z-0"></div>
+        <div class="absolute bottom-0 left-0 right-0 h-32 pointer-events-none z-0" id="seaweed-container"></div>
+        
+        <!-- START SCREEN -->
+        <section id="start-screen" class="absolute inset-0 flex items-center justify-center z-20 p-4">
+            <div class="panel rounded-2xl p-8 max-w-2xl w-full text-center">
+                <div class="mb-4 text-6xl">🐟</div>
+                <h1 id="title-text" class="pixel-font text-3xl md:text-5xl mb-4 text-cyan-300 neon-glow"
+                    style="color:#00e5ff">DEEP SEA FISHING</h1>
+                <p id="subtitle-text" class="text-cyan-100 mb-8 text-lg">Catch the biggest fish and top the leaderboard!</p>
+                
+                <div class="mb-8 max-w-xs mx-auto">
+                    <label for="player-name-input" class="block text-cyan-300 pixel-font text-xs mb-3">ENTER YOUR NAME</label> 
+                    <input id="player-name-input" type="text" maxlength="12" placeholder="ANGLER"
+                        class="w-full px-4 py-3 rounded-lg text-center pixel-font text-sm">
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+                    <button id="start-btn" class="btn-arcade text-white pixel-font text-sm px-8 py-4 rounded-lg"> 
+                        <span id="start-btn-text">PLAY</span> 
+                    </button> 
+                    <button id="show-leaderboard-btn" class="btn-cyan pixel-font text-sm px-8 py-4 rounded-lg"> 
+                        <i data-lucide="trophy" class="inline w-4 h-4"></i> LEADERBOARD 
+                    </button>
+                </div>
+                
+                <div class="text-cyan-200 text-sm grid grid-cols-2 md:grid-cols-4 gap-2 pt-4 border-t border-cyan-700">
+                    <div>🐠 +10 pts</div>
+                    <div>🐡 +25 pts</div>
+                    <div>🦑 +50 pts</div>
+                    <div>🐙 +100 pts</div>
+                </div>
+                <p class="text-red-300 text-xs mt-3">⚠️ Avoid the shark! 🦈</p>
+            </div>
+        </section>
+
+        <!-- LEVEL SELECT SCREEN -->
+        <section id="level-select-screen" class="absolute inset-0 hidden z-20 items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <div class="panel rounded-2xl p-8 w-full max-w-3xl text-center max-h-[90vh] flex flex-col">
+                <h2 class="pixel-font text-2xl text-cyan-300 neon-glow mb-6 flex-shrink-0" style="color:#00e5ff">SELECT LEVEL</h2>
+                <div id="level-buttons-container" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 overflow-y-auto scroll-thin pr-2 flex-1 min-h-0 pb-2">
+                    <!-- Populated by JS -->
+                </div>
+                <button id="back-to-start-btn" class="btn-arcade text-white pixel-font text-sm px-8 py-3 rounded-lg flex-shrink-0">BACK</button>
+            </div>
+        </section>
+        
+        <!-- GAME SCREEN -->
+        <section id="game-screen" class="absolute inset-0 hidden z-10">
+            <!-- HUD -->
+            <div class="absolute top-0 left-0 right-0 z-30 p-3 flex justify-between items-start gap-2 flex-wrap">
+                <div class="hud-panel rounded-lg px-4 py-2 flex gap-4 items-center flex-wrap">
+                    <div>
+                        <div class="text-cyan-400 pixel-font text-[10px]">SCORE</div>
+                        <div id="score-display" class="text-yellow-300 pixel-font text-lg neon-glow" style="color:#ffd700">0</div>
+                    </div>
+                    <div class="level-badge rounded-lg px-3 py-1" style="background:rgba(255,0,110,0.2);color:#ff006e;border:2px solid #ff006e">
+                        <div class="pixel-font text-[10px]">LEVEL</div>
+                        <div id="level-display" class="pixel-font text-lg">1</div>
+                    </div>
+                    <div>
+                        <div class="text-cyan-400 pixel-font text-[10px]">GOAL</div>
+                        <div id="goal-display" class="text-pink-400 pixel-font text-lg">150</div>
+                    </div>
+                </div>
+                <div class="hud-panel rounded-lg px-4 py-2">
+                    <div class="text-cyan-400 pixel-font text-[10px]">TIME</div>
+                    <div id="time-display" class="text-white pixel-font text-lg">60</div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="pause-btn" class="btn-cyan pixel-font text-xs px-4 py-2 rounded-lg">
+                        <i data-lucide="pause" class="inline w-3 h-3"></i> PAUSE 
+                    </button> 
+                </div>
+            </div>
+            
+            <!-- Game area -->
+            <div id="game-area" class="absolute inset-0"></div>
+        </section>
+        
+        <!-- PAUSE OVERLAY -->
+        <section id="pause-screen" class="absolute inset-0 hidden z-40 items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div class="panel rounded-2xl p-8 text-center max-w-md">
+                <div class="text-5xl mb-4">⏸️</div>
+                <h2 class="pixel-font text-2xl text-cyan-300 neon-glow mb-6" style="color:#00e5ff">PAUSED</h2>
+                <div class="flex flex-col gap-3">
+                    <button id="resume-btn" class="btn-cyan pixel-font text-sm px-8 py-3 rounded-lg">▶ RESUME</button> 
+                    <button id="pause-quit-btn" class="btn-arcade text-white pixel-font text-sm px-8 py-3 rounded-lg">✕ QUIT LEVEL</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- GAME OVER -->
+        <section id="gameover-screen" class="absolute inset-0 hidden z-40 items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div class="panel rounded-2xl p-8 text-center max-w-md w-full">
+                <div id="gameover-icon" class="text-6xl mb-3">🏆</div>
+                <h2 id="gameover-title" class="pixel-font text-2xl text-yellow-300 neon-glow mb-4" style="color:#ffd700">LEVEL CLEAR!</h2>
+                <p id="gameover-msg" class="text-cyan-200 mb-6 pixel-font text-xs"></p>
+                <div class="space-y-3 mb-6">
+                    <div class="hud-panel rounded-lg p-3">
+                        <div class="text-cyan-400 pixel-font text-[10px]">FINAL SCORE</div>
+                        <div id="final-score" class="pixel-font text-3xl text-yellow-300" style="color:#ffd700">0</div>
+                    </div>
+                    <div id="save-status" class="text-cyan-200 text-xs"></div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button id="retry-btn" class="btn-gold pixel-font text-sm px-6 py-3 rounded-lg flex-1">🔄 RETRY</button> 
+                    <button id="next-level-btn" class="btn-cyan pixel-font text-sm px-6 py-3 rounded-lg flex-1 hidden">NEXT LEVEL</button>
+                    <button id="levels-btn" class="btn-arcade text-white pixel-font text-sm px-6 py-3 rounded-lg flex-1">MAP</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- LEADERBOARD -->
+        <section id="leaderboard-screen" class="absolute inset-0 hidden z-40 items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div class="panel rounded-2xl p-6 max-w-lg w-full max-h-[90%] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="leaderboard-title-text" class="pixel-font text-xl text-yellow-300 neon-glow" style="color:#ffd700">🏆 LEADERBOARD</h2>
+                    <button id="close-leaderboard-btn" class="text-cyan-300 hover:text-white text-2xl">✕</button>
+                </div>
+                <div id="leaderboard-list" class="flex-1 overflow-y-auto scroll-thin space-y-2 pr-2">
+                    <div class="text-center text-cyan-300 py-8 pixel-font text-xs">Loading...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- EXTERNAL SCRIPT -->
+    <script src="script.js"></script>
+</body>
+</html>
